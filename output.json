@@ -1,0 +1,27 @@
+{
+    "name": "Sanjana Sara Siju",
+    "gender": "Female",
+    "email address": "sanjanasarasiju@gmail.com",
+    "mobile number": "050 673 9509",
+    "date of birth": "11-Jun-2005",
+    "age": "20",
+    "marital status": "Unmarried",
+    "no of kids": "0",
+    "current visa": "Dependent",
+    "visa validity": "07/05/2034",
+    "final qualification with specialisation": "Undergoing BSc Computer Science",
+    "year of course completion/name of institution": "June 2027 / American University of Sharjah",
+    "work experience in uae": "0",
+    "work experience in india/other countries": "0",
+    "main software platforms worked": "Python, C++, Java, MATLAB, Cisco packet tracer",
+    "academic_years": [
+        "2021",
+        "2023",
+        "2027"
+    ],
+    "academic_marks": [
+        "95%",
+        "93.4%",
+        "null"
+    ]
+}

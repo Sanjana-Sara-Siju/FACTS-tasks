@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CALCULATOR</title>
+</head>
+<body>
+
+    <h2>Calculator</h2>
+
+    {% if result is not none %} 
+        <h3>Result: {{ result }}</h3> 
+    {% endif %}
+
+    <form action="/calculator" method="post">
+        <input type="number" step="any" name="num1" placeholder="First Number" required>
+        
+        <select name="operation">
+            <option value="add">+</option>
+            <option value="subtract">-</option>
+            <option value="multiply">*</option>
+            <option value="divide">/</option>
+        </select>
+        
+        <input type="number" step="any" name="num2" placeholder="Second Number" required>
+        <br><br>
+        <button type="submit">Calculate</button>
+    </form>
+    
+</body>
+</html>

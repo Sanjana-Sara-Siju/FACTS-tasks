@@ -1,0 +1,155 @@
+<!-- we use JavaScript to upload the file without reloading the page -->
+<!-- so that user stays on the same page -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FILE UPLOAD & AI PDF CONVERSATIONAL ANALYSIS</title>
+    <!-- MARKED.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
+</head>
+<body>
+
+    <h2>Upload a file to analyze: </h2>
+    <input type = "file" id = "fileInput" accept = ".pdf, .txt"> 
+    <!-- accept = accepts only .pdf and .txt files -->
+    <button onclick = "uploadFile()"> Analyze! </button>
+    <p id = "uploadStatus"></p>
+
+    <hr>
+
+    <h2>Chat with your document!</h2>
+    <div id = "chatSection" style = "display: none;"> 
+        <!-- display: none hides the chat until file is fully processed -->
+        <div id = "chatLog" style = "border: 1px solid black; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px;">
+            <p><em>AI: File processed! Ask me anything about it.</em></p>
+        </div>
+        <input type = "text" id = "userMessage" placeholder = "Ask a question..." style = "width: 70%;">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    
+    <!-- now JS portion -->
+    <script>
+
+        // global variable to hold app state
+        let chatHistory = [];
+
+        // file uploads rely on network requests
+        // network requests are asynchronous, meaning the browser needs to pause execution 
+        // until the server finishes receiving and processing the file.
+        //  Using "async" allows to use "await" later, which prevents function from moving 
+        // forward until file upload successfully completes.
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const chatSection = document.getElementById('chatSection');
+            const chatLog = document.getElementById('chatLog');
+
+            if (fileInput.files.length === 0) // strict equality 
+            {
+                alert("Please select a file first..."); // alerts user if they click "Analyze!" without uploading anything
+                return;
+            }
+
+            const file = fileInput.files[0]; // extracts very 1st file 
+            const formData = new FormData(); //  creates a special object that bundles binary data like PDFs into an HTTP request                                                                                       
+            formData.append("file", file); // adds file package into formData 
+
+            uploadStatus.innerText = "Reading file contents....";
+
+            try {
+                // fetch API used to make async HTTP requests to retrieve/send data across a network
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json(); //unpacks raw data returned into JS dict object
+
+                if (data.error) {
+                    uploadStatus.innerText = "Error: " + data.error;
+                } else {
+                    // saving text to global JS variable
+                    uploadStatus.innerText = `Successfully processed: ${data.filename}`;
+
+                    
+                    chatHistory = [
+                        {"role": "system", "content": "You are an AI assistant analyzing a document for the user."},
+                        {"role": "user", "content": `Here is the text we will discuss:\n\n${data.text}\n\nAcknowledge that you read it and are ready to answer my questions.`}
+                    ];
+
+                    //initial acknowledgement from Mistral
+                    const primeResponse = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages: chatHistory }) // encodes structured data into a JSON-compliant text string
+                    });
+                    const primeData = await primeResponse.json();
+
+                    if (primeData.error) {
+                        uploadStatus.innerText = "Error initializing chat: " + primeData.error;
+                    } else {
+                        //storees AI reply into history array
+                        chatHistory.push({"role": "assistant", "content": primeData.reply});
+                        
+                        //displaying the acknowledgement to user
+                        chatLog.innerHTML = `<p><strong>AI:</strong></p> ${marked.parse(primeData.reply)}`;                        
+                        chatSection.style.display = "block"; // un-hides chat section
+                }
+            }
+
+            } catch (error) {
+                uploadStatus.innerText = "An error occurred during upload.";
+                console.error(error);
+            }
+        }
+
+
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('userMessage');
+            const chatLog = document.getElementById('chatLog');
+            const userInput = messageInput.value.trim(); 
+            // trim --> removes leading or trailing whitespaces
+
+            if (!userInput) return;
+
+            //appending user's message to the chat display
+            chatLog.innerHTML += `<p><strong>You:</strong> ${userInput}</p>`;
+            messageInput.value = ""; //clearing input box
+
+            //pushing user's message to running history array
+            chatHistory.push({"role": "user", "content": userInput});
+
+            try {
+                //sending both the question and document text to FastAPI
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    chatLog.innerHTML += `<p style="color: red;"><strong>Error:</strong> ${data.error}</p>`;
+                } else {
+                    chatLog.innerHTML += `<p><strong>AI:</strong></p> ${marked.parse(data.reply)}<hr>`;
+                    //pushing response to history to remember for next cycle
+                    chatHistory.push({"role": "assistant", "content": data.reply});
+                }
+
+            } catch (error) {
+                chatLog.innerHTML += `<p style="color: red;"><strong>Error:</strong> Failed to connect to server.</p>`;
+                console.error(error);
+            }
+        }
+
+
+    </script>
+
+</body>
+</html>
